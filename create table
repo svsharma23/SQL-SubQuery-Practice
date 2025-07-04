@@ -1,0 +1,39 @@
+CREATE TABLE customers (
+    customer_id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    city VARCHAR(50),
+    age INT,
+    status VARCHAR(20)
+);
+
+INSERT INTO customers (name, city, age, status) VALUES
+('Ravi Kumar', 'Delhi', 28, 'Active'),
+('Sneha Singh', 'Mumbai', 32, 'Inactive'),
+('Aman Verma', 'Bangalore', 45, 'Active'),
+('Ritu Sharma', 'Kolkata', 26, 'Active'),
+('Mohan Lal', 'Delhi', 51, 'Inactive'),
+('Anjali Mehta', 'Chennai', 35, 'Active'),
+('Kunal Roy', 'Pune', 29, 'Active'),
+('Priya Das', 'Mumbai', 41, 'Inactive'),
+('Rajeev Ranjan', 'Patna', 38, 'Active'),
+('Tina Sethi', 'Jaipur', 27, 'Active');
+
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    customer_id INT REFERENCES customers(customer_id),
+    order_date DATE,
+    amount INT,
+    status VARCHAR(20)
+);
+
+INSERT INTO orders (customer_id, order_date, amount, status) VALUES
+(1, '2024-01-15', 500, 'Delivered'),
+(2, '2024-02-20', 800, 'Cancelled'),
+(3, '2024-03-10', 250, 'Delivered'),
+(4, '2024-03-22', 1200, 'Delivered'),
+(5, '2024-04-01', 1000, 'Returned'),
+(1, '2024-04-11', 300, 'Delivered'),
+(6, '2024-05-01', 700, 'Delivered'),
+(7, '2024-05-20', 900, 'Cancelled'),
+(9, '2024-06-05', 1100, 'Delivered'),
+(10, '2024-06-10', 1500, 'Delivered');
