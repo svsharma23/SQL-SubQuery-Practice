@@ -1,1 +1,235 @@
 # SQL-SubQuery-Practice
+
+CREATE TABLE customers (
+    customer_id SERIAL PRIMARY KEY,
+    name VARCHAR(100),
+    city VARCHAR(50),
+    age INT,
+    status VARCHAR(20)
+);
+
+INSERT INTO customers (name, city, age, status) VALUES
+('Ravi Kumar', 'Delhi', 28, 'Active'),
+('Sneha Singh', 'Mumbai', 32, 'Inactive'),
+('Aman Verma', 'Bangalore', 45, 'Active'),
+('Ritu Sharma', 'Kolkata', 26, 'Active'),
+('Mohan Lal', 'Delhi', 51, 'Inactive'),
+('Anjali Mehta', 'Chennai', 35, 'Active'),
+('Kunal Roy', 'Pune', 29, 'Active'),
+('Priya Das', 'Mumbai', 41, 'Inactive'),
+('Rajeev Ranjan', 'Patna', 38, 'Active'),
+('Tina Sethi', 'Jaipur', 27, 'Active');
+
+CREATE TABLE orders (
+    order_id SERIAL PRIMARY KEY,
+    customer_id INT REFERENCES customers(customer_id),
+    order_date DATE,
+    amount INT,
+    status VARCHAR(20)
+);
+
+INSERT INTO orders (customer_id, order_date, amount, status) VALUES
+(1, '2024-01-15', 500, 'Delivered'),
+(2, '2024-02-20', 800, 'Cancelled'),
+(3, '2024-03-10', 250, 'Delivered'),
+(4, '2024-03-22', 1200, 'Delivered'),
+(5, '2024-04-01', 1000, 'Returned'),
+(1, '2024-04-11', 300, 'Delivered'),
+(6, '2024-05-01', 700, 'Delivered'),
+(7, '2024-05-20', 900, 'Cancelled'),
+(9, '2024-06-05', 1100, 'Delivered'),
+(10, '2024-06-10', 1500, 'Delivered');
+
+-- ✅ A. Scalar Subqueries (Single Value Return)
+-- Get customers older than the average age of all customers.
+
+SELECT name FROM customers
+WHERE age > (
+SELECT AVG(age) AS average_age
+FROM customers);
+
+--1 Find customers whose order amount is greater than the average order amount.
+
+SELECT c.customer_id, c.name FROM customers c
+INNER JOIN orders o
+ON c.customer_id = o.customer_id
+WHERE o.amount > (
+SELECT AVG(o.amount) AS average_amount
+FROM orders o);
+
+--2 Get the name(s) of customers who are younger than the youngest person in Mumbai.
+
+SELECT name, age FROM customers
+WHERE age < (
+SELECT MIN(age) AS youngest_person_mumbai
+FROM customers
+WHERE city = 'Mumbai');
+
+--3 Show the name(s) of customer(s) who spent more than the total amount spent by customer_id = 3.
+
+SELECT name FROM customers
+WHERE (SELECT SUM(amount) FROM orders
+		WHERE customers.customer_id = orders.customer_id)
+>
+(SELECT SUM(amount) AS total_amount
+FROM orders 
+WHERE customer_id = 3);
+
+
+--4 Find the customer(s) whose age is equal to the maximum age among all customers.
+
+SELECT name FROM customers
+WHERE age = (
+SELECT MAX(age) max_age FROM customers);
+
+-- ✅ B. Row Subqueries (One Row, Multiple Columns)
+--5 Find customers with same city and age as customer_id = 5.
+
+SELECT name FROM customers
+WHERE (name, age) =
+(SELECT name, age FROM customers
+WHERE customer_id = 5);
+
+--6 Find customer(s) with the same city and status as 'Sneha Singh'.
+
+SELECT name FROM customers
+WHERE (city, status) = 
+(SELECT city, status FROM customers
+WHERE name = 'Sneha Singh');
+
+--7 Get customer(s) who share both age and city with anyone from Chennai.
+
+SELECT name FROM customers
+WHERE (age, city) IN
+(SELECT age, city FROM customers
+WHERE city = 'Chennai');
+
+-- ✅ C. Table Subqueries in FROM Clause (Inline Views)
+--8 Find the number of orders per customer using an inline view.
+
+SELECT c.name, COUNT(o.order_id)
+FROM (SELECT name, customer_id FROM customers) c
+INNER JOIN orders o
+ON c.customer_id = o.customer_id
+GROUP BY c.name;
+
+--9 Get city-wise count of active customers using a subquery.
+
+SELECT city, COUNT(*) FROM
+(SELECT * FROM customers WHERE status = 'Active')
+GROUP BY city;
+
+--10 Show top 3 customers by total order amount, using a derived table.
+
+SELECT name, total_amount FROM
+	(SELECT c.name, SUM(o.amount) AS total_amount FROM customers c
+INNER JOIN orders o
+ON c.customer_id = o.customer_id
+GROUP BY c.name) 
+ORDER BY total_amount DESC
+LIMIT 3;
+
+--11 Get customers who placed more than 1 order, using subquery with GROUP BY.
+
+SELECT name, order_count FROM
+(SELECT c.name, COUNT(o.customer_id) AS order_count
+FROM customers c
+INNER JOIN orders o
+ON c.customer_id = o.customer_id
+GROUP BY c.name) AS ordercount
+WHERE order_count > 1
+;
+
+--12 Show all customer details along with total order value, using subquery in FROM.
+SELECT customer_id, name, city, age, status, total_order_value FROM
+(SELECT c.customer_id, c.name, c.city, c.age, c.status, SUM(o.amount) AS total_order_value
+FROM customers c
+INNER JOIN orders o
+ON c.customer_id = o.customer_id
+GROUP BY c.customer_id, c.name, c.city, c.age, c.status
+ORDER BY customer_id) AS customer_details;
+
+
+-- ✅ D. Subqueries in SELECT Clause
+--13 Display each customer's name and their total order count.
+
+SELECT name, 
+(SELECT COUNT(customer_id) FROM orders WHERE orders.customer_id = customers.customer_id ) AS order_count
+FROM customers;
+
+--14 Show customer names along with average order amount per customer.
+
+SELECT name, 
+(SELECT ROUND(AVG(amount),2) FROM orders WHERE orders.customer_id = customers.customer_id ) AS average_order_amount
+FROM customers;
+
+--15 Get customer names with the amount of their latest order.
+
+SELECT name,
+(SELECT order_date FROM orders WHERE orders.customer_id = customers.customer_id ORDER BY order_date DESC LIMIT 1 ) AS latest_order
+FROM customers;
+
+--16 For each customer, display the status of their first order.
+
+SELECT (SELECT name FROM customers WHERE orders.customer_id = customers.customer_id), order_date, status
+FROM orders
+ORDER BY order_date;
+
+--✅ E. Subqueries in WHERE Clause
+--17 Get names of customers who have made at least one order > ₹1000.
+
+SELECT c.name, o.amount FROM customers c
+INNER JOIN orders o
+ON o.customer_id = c.customer_id
+WHERE c.customer_id IN 
+(SELECT customer_id FROM orders
+WHERE amount > 1000 );
+
+--18 List customers who have not placed any order.
+
+SELECT name FROM customers
+WHERE customer_id 
+NOT IN
+(SELECT customer_id FROM orders);
+
+---------------------------------------------------------- We can use either solution "Just for practice"
+SELECT c.name
+FROM customers c
+LEFT JOIN orders o ON c.customer_id = o.customer_id
+WHERE o.customer_id IS NULL;
+
+--19 Find customers who have only cancelled or returned orders.
+
+SELECT c.name, o.status
+FROM customers c
+INNER JOIN orders o
+ON c.customer_id = o.customer_id
+WHERE o.status NOT IN
+(SELECT status FROM orders
+WHERE status = 'Delivered');
+
+--20 Show customers who ordered after March 2024
+
+SELECT c.name, o.order_date
+FROM customers c
+INNER JOIN orders o
+ON c.customer_id = o.customer_id
+WHERE o.order_date IN
+(SELECT order_date FROM orders 
+WHERE order_date > '2024-03-01' );
+
+--21 Get customers whose order count is less than 2.
+
+SELECT c.name, COUNT(o.customer_id)
+FROM customers c
+INNER JOIN orders o
+ON c.customer_id = o.customer_id
+WHERE o.customer_id IN
+(SELECT customer_id FROM orders
+GROUP BY customer_id
+HAVING COUNT(order_id) <2)
+GROUP BY c.name;
+
+
+
+
